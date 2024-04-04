@@ -113,26 +113,45 @@ class HBNBCommand(cmd.Cmd):
         """ Overrides the emptyline method of CMD """
         pass
 
+    class CommandError(Exception):
+        pass
+
     def do_create(self, args):
         """ Create an object of any class"""
+        if not args:
+            raise self.CommandError("** class name missing **")
+
+        args_list = args.split()
+
+        class_name = args_list[0]
+        params = args_list[1:]
+
+        if class_name not in HBNBCommand.classes:
+            raise self.CommandError("** class doesn't exist **")
+
         try:
-            if not args:
-                raise SyntaxError()
-            arg_list = args.split(" ")
-            kw = {}
-            for arg in arg_list[1:]:
-                arg_splited = arg.split("=")
-                arg_splited[1] = eval(arg_splited[1])
-                if type(arg_splited[1]) is str:
-                    arg_splited[1] = arg_splited[1].replace("_", " ").replace('"', '\\"')
-                kw[arg_splited[0]] = arg_splited[1]
-        except SyntaxError:
-            print("** class name missing **")
-        except NameError:
-            print("** class doesn't exist **")
-        new_instance = HBNBCommand.classes[arg_list[0]](**kw)
-        new_instance.save()
+            new_instance = HBNBCommand.classes[class_name]()
+        except Exception as e:
+            raise self.CommandError(f"Error creating instance: {e}")
+
+        for param in params:
+            try:
+                key, value = param.split('=')
+
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1].replace('_', ' ').replace('\\"', '"')
+                elif '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+
+                setattr(new_instance, key, value)
+
+            except ValueError:
+                print(f"Invalid parameter format. Skipping.")
+
         print(new_instance.id)
+        new_instance.save()
 
     def help_create(self):
         """ Help information for the create method """
@@ -195,7 +214,7 @@ class HBNBCommand(cmd.Cmd):
         key = c_name + "." + c_id
 
         try:
-            del(storage.all()[key])
+            del storage.all()[key]
             storage.save()
         except KeyError:
             print("** no instance found **")
@@ -210,15 +229,19 @@ class HBNBCommand(cmd.Cmd):
         print_list = []
 
         if args:
-            args = args.split(' ')[0]  # remove possible trailing args
+            args = args.split(' ')[0]
             if args not in HBNBCommand.classes:
                 print("** class doesn't exist **")
                 return
-            for k, v in storage.all(HBNBCommand.classes[args]).items():
-                print_list.append(str(v))
+
+            objects_dict = storage.all(HBNBCommand.classes[args])
+            for obj_id, obj in objects_dict.items():
+                print_list.append(str(obj))
         else:
-            for k, v in storage.all().items():
-                print_list.append(str(v))
+            objects_dict = storage.all()
+            for obj_id, obj in objects_dict.items():
+                print_list.append(str(obj))
+
         print(print_list)
 
     def help_all(self):
@@ -325,6 +348,7 @@ class HBNBCommand(cmd.Cmd):
         """ Help information for the update class """
         print("Updates an object with new information")
         print("Usage: update <className> <id> <attName> <attVal>\n")
+
 
 if __name__ == "__main__":
     HBNBCommand().cmdloop()
