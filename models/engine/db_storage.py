@@ -30,7 +30,7 @@ class DBStorage:
                 db_user, db_pwd, db_host, db_name),
             pool_pre_ping=True
 
-        if env == "test":
+            if env == "test":
             Base.metadata.drop_all(self.__engine)
 
     def all(self, cls=None):
